@@ -7,6 +7,7 @@ import torch
 import numpy as np
 import subprocess
 import pickle
+from collections import defaultdict
 from .distance_map import get_dist_map
 
 def seed_everything(seed=1234):
@@ -17,23 +18,42 @@ def seed_everything(seed=1234):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
 
-
 def get_ec_id_dict(csv_name: str) -> dict:
     csv_file = open(csv_name)
-    csvreader = csv.reader(csv_file, delimiter='\t')
+    csvreader = csv.reader(csv_file, delimiter='\t')  # or ',' if comma-separated
     id_ec = {}
     ec_id = {}
 
     for i, rows in enumerate(csvreader):
+        # print(f"Row {i}: {rows}")
         if i > 0:
             id_ec[rows[0]] = rows[1].split(';')
             for ec in rows[1].split(';'):
                 if ec not in ec_id.keys():
                     ec_id[ec] = set()
-                    ec_id[ec].add(rows[0])
-                else:
-                    ec_id[ec].add(rows[0])
+                ec_id[ec].add(rows[0])
+        # if i > 5:  # just show 6 rows max
+        #     break
+    # print(id_ec)
+    # print(ec_id)
     return id_ec, ec_id
+
+# def get_ec_id_dict(csv_name: str) -> dict:
+#     csv_file = open(csv_name)
+#     csvreader = csv.reader(csv_file, delimiter='\t')
+#     id_ec = {}
+#     ec_id = {}
+
+#     for i, rows in enumerate(csvreader):
+#         if i > 0:
+#             id_ec[rows[0]] = rows[1].split(';')
+#             for ec in rows[1].split(';'):
+#                 if ec not in ec_id.keys():
+#                     ec_id[ec] = set()
+#                     ec_id[ec].add(rows[0])
+#                 else:
+#                     ec_id[ec].add(rows[0])
+#     return id_ec, ec_id
 
 def get_ec_id_dict_non_prom(csv_name: str) -> dict:
     csv_file = open(csv_name)

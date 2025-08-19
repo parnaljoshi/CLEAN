@@ -190,68 +190,133 @@ def update_dist_dict_blast(emb_test, emb_train, dist, start, end,
                     dist[id_test][EC] = dist_train_closest
     return dist
 
-
 def get_true_labels(file_name):
-    result = open(file_name+'.csv', 'r')
+    # result = open(file_name+'.csv', 'r')
+    if not file_name.endswith('.csv'):
+        file_name += '.csv'
+    result = open(file_name, 'r')
     csvreader = csv.reader(result, delimiter='\t')
     all_label = set()
     true_label_dict = {}
     header = True
-    count = 0
     for row in csvreader:
-        # don't read the header
-        if header is False:
-            count += 1
-            true_ec_lst = row[1].split(';')
-            true_label_dict[row[0]] = true_ec_lst
-            for ec in true_ec_lst:
-                all_label.add(ec)
         if header:
             header = False
+            continue
+        true_ec_lst = row[1].split(';')
+        true_ec_lst = [ec.strip() for ec in true_ec_lst if ec.strip()]
+        true_label_dict[row[0]] = true_ec_lst
+        all_label.update(true_ec_lst)
     true_label = [true_label_dict[i] for i in true_label_dict.keys()]
     return true_label, all_label
 
-
 def get_pred_labels(out_filename, pred_type="_maxsep"):
-    file_name = out_filename+pred_type
-    result = open(file_name+'.csv', 'r')
+    file_name = out_filename + pred_type
+    # result = open(file_name+'.csv', 'r')
+    if not file_name.endswith('.csv'):
+        file_name += '.csv'
+    result = open(file_name, 'r')
     csvreader = csv.reader(result, delimiter=',')
     pred_label = []
     for row in csvreader:
         preds_ec_lst = []
         preds_with_dist = row[1:]
         for pred_ec_dist in preds_with_dist:
-            # get EC number 3.5.2.6 from EC:3.5.2.6/10.8359
-            ec_i = pred_ec_dist.split(":")[1].split("/")[0]
-            preds_ec_lst.append(ec_i)
+            try:
+                ec_i = pred_ec_dist.split(":")[1].split("/")[0]
+                preds_ec_lst.append(ec_i.strip())
+            except IndexError:
+                continue
         pred_label.append(preds_ec_lst)
     return pred_label
 
+
+# def get_true_labels(file_name):
+#     result = open(file_name+'.csv', 'r')
+#     csvreader = csv.reader(result, delimiter='\t')
+#     all_label = set()
+#     true_label_dict = {}
+#     header = True
+#     count = 0
+#     for row in csvreader:
+#         # don't read the header
+#         if header is False:
+#             count += 1
+#             true_ec_lst = row[1].split(';')
+#             true_label_dict[row[0]] = true_ec_lst
+#             for ec in true_ec_lst:
+#                 all_label.add(ec)
+#         if header:
+#             header = False
+#     true_label = [true_label_dict[i] for i in true_label_dict.keys()]
+#     return true_label, all_label
+
+
+# def get_pred_labels(out_filename, pred_type="_maxsep"):
+#     file_name = out_filename+pred_type
+#     result = open(file_name+'.csv', 'r')
+#     csvreader = csv.reader(result, delimiter=',')
+#     pred_label = []
+#     for row in csvreader:
+#         preds_ec_lst = []
+#         preds_with_dist = row[1:]
+#         for pred_ec_dist in preds_with_dist:
+#             # get EC number 3.5.2.6 from EC:3.5.2.6/10.8359
+#             ec_i = pred_ec_dist.split(":")[1].split("/")[0]
+#             preds_ec_lst.append(ec_i)
+#         pred_label.append(preds_ec_lst)
+#     return pred_label
+
 def get_pred_probs(out_filename, pred_type="_maxsep"):
-    file_name = out_filename+pred_type
-    result = open(file_name+'.csv', 'r')
+    file_name = out_filename + pred_type
+    # result = open(file_name+'.csv', 'r')
+    if not file_name.endswith('.csv'):
+        file_name += '.csv'
+    result = open(file_name, 'r')
     csvreader = csv.reader(result, delimiter=',')
     pred_probs = []
     for row in csvreader:
-        preds_ec_lst = []
         preds_with_dist = row[1:]
         probs = torch.zeros(len(preds_with_dist))
-        count = 0
-        for pred_ec_dist in preds_with_dist:
-            # get EC number 3.5.2.6 from EC:3.5.2.6/10.8359
-            ec_i = float(pred_ec_dist.split(":")[1].split("/")[1])
-            probs[count] = ec_i
-            #preds_ec_lst.append(probs)
-            count += 1
-        # sigmoid of the negative distances 
+        for idx, pred_ec_dist in enumerate(preds_with_dist):
+            try:
+                dist_val = float(pred_ec_dist.split(":")[1].split("/")[1])
+                probs[idx] = dist_val
+            except:
+                probs[idx] = 99.0  # fallback
         probs = (1 - torch.exp(-1/probs)) / (1 + torch.exp(-1/probs))
-        probs = probs/torch.sum(probs)
+        probs = probs / torch.sum(probs)
         pred_probs.append(probs)
     return pred_probs
 
+# def get_pred_probs(out_filename, pred_type="_maxsep"):
+#     file_name = out_filename+pred_type
+#     result = open(file_name+'.csv', 'r')
+#     csvreader = csv.reader(result, delimiter=',')
+#     pred_probs = []
+#     for row in csvreader:
+#         preds_ec_lst = []
+#         preds_with_dist = row[1:]
+#         probs = torch.zeros(len(preds_with_dist))
+#         count = 0
+#         for pred_ec_dist in preds_with_dist:
+#             # get EC number 3.5.2.6 from EC:3.5.2.6/10.8359
+#             ec_i = float(pred_ec_dist.split(":")[1].split("/")[1])
+#             probs[count] = ec_i
+#             #preds_ec_lst.append(probs)
+#             count += 1
+#         # sigmoid of the negative distances 
+#         probs = (1 - torch.exp(-1/probs)) / (1 + torch.exp(-1/probs))
+#         probs = probs/torch.sum(probs)
+#         pred_probs.append(probs)
+#     return pred_probs
+
 def get_pred_labels_prc(out_filename, cutoff, pred_type="_maxsep"):
     file_name = out_filename+pred_type
-    result = open(file_name+'.csv', 'r')
+    # result = open(file_name+'.csv', 'r')
+    if not file_name.endswith('.csv'):
+        file_name += '.csv'
+    result = open(file_name, 'r')
     csvreader = csv.reader(result, delimiter=',')
     pred_label = []
     for row in csvreader:
